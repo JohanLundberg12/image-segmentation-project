@@ -6,6 +6,8 @@ def get_device():
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")
-    print(f"Using {device} as backend")
+        print(f"Using {device} as backend")
 
     return device
+
+    # return "cpu"
