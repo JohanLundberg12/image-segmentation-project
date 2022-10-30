@@ -11,7 +11,7 @@ class BaseLineModel(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
         self.fc1 = nn.Linear(13456, 120)  # 13456 because images were 128x128 at start
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.fc3 = nn.Linear(84, 19)
 
     def forward(self, x):
         x = self.pool(f.relu(self.conv1(x)))
@@ -20,4 +20,5 @@ class BaseLineModel(nn.Module):
         x = f.relu(self.fc1(x))
         x = f.relu(self.fc2(x))
         x = self.fc3(x)
+
         return x

@@ -20,7 +20,7 @@ def create_model(config: dict):
         pass
         # model = BestCNN()
     else:
-        raise
+        raise NameError
 
     return model
 
@@ -90,20 +90,40 @@ def main(config: dict):
     loss_fn = nn.CrossEntropyLoss()
     epochs = 10
     device = get_device()
-    early_stopping = EarlyStopping()
+    exp_name = f'{config["model"]["name"]}_{config["augmentation"]["name"]}'
+    early_stopping = EarlyStopping(
+        patience=5,
+        verbose=True,
+        path=f"{exp_name}_checkpoint.pt",
+    )
 
     trainer = Trainer(
         config=config,
         model=model.to(device),
         train_loader=train_loader,
         val_loader=val_loader,
+        test_loader=test_loader,
         optimizer=optimizer,
         loss_fn=loss_fn,
         epochs=epochs,
         device=device,
         early_stopping=early_stopping,
     )
-    trainer.train()
+    results = trainer.train()
+
+    result = trainer.predict()
+
+    print(f"\ntrain-Val results: {results}")
+    print(f"\navg test-f1: {result}")
+
+    with open(f"{exp_name}_results.txt", "w") as file:
+        file.write(f"\ntrain-Val results: \n")
+        for key, val in results.items():
+            file.write(f"{key}: ")
+            for item in val:
+                file.write(str(item))
+            file.write("\n")
+        file.write(f"\n avg test-f1: {str(result)}")
 
 
 if __name__ == "__main__":

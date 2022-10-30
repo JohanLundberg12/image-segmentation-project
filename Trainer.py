@@ -23,11 +23,12 @@ class Trainer:
     model: nn.Module
     train_loader: DataLoader
     val_loader: DataLoader
+    test_loader: DataLoader
     loss_fn: Callable
     optimizer: optim.Optimizer
     device: str
     epochs: int
-    early_stopping: EarlyStopping(verbose=True)
+    early_stopping: EarlyStopping
 
     def train_step(self):
         self.model.train()
@@ -106,8 +107,38 @@ class Trainer:
 
         return valid_loss, avg_valid_f1
 
+    def predict(self):
+
+        # load checkpoint
+        self.model.load_state_dict(torch.load(self.early_stopping.path))
+
+        test_f1 = list()
+
+        pbar = progress_bar(self.test_loader, desc="predicting on test set")
+
+        with torch.inference_mode():
+            for _, (data, targets) in pbar:
+                data = data.to(self.device)
+                targets = targets.to(self.device)
+
+                preds = self.model(data)
+
+                y_preds = preds.argmax(-1).cpu().numpy()
+                y_target = targets.cpu().numpy()
+                batch_f1 = f1_score(y_target, y_preds, average="micro")
+                test_f1.append(batch_f1)
+
+        avg_test_f1 = sum(test_f1) / len(test_f1)
+
+        return avg_test_f1
+
     def train(self):
-        results = {"train_losses": list(), "valid_losses": list()}
+        results = {
+            "train_losses": list(),
+            "valid_losses": list(),
+            "train_f1": list(),
+            "valid_f1": list(),
+        }
 
         for epoch in range(1, self.epochs + 1):
             start = time()
@@ -126,9 +157,13 @@ class Trainer:
             # Save losses
             results["train_losses"].append(train_loss),
             results["valid_losses"].append(valid_loss)
+            results["train_f1"].append(avg_train_f1)
+            results["valid_f1"].append(avg_valid_f1)
 
             self.early_stopping(val_loss=valid_loss, model=self.model)
 
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
+
+        return results
