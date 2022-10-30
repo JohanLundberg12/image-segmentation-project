@@ -1,13 +1,18 @@
 from typing import Callable
-import numpy as np
 import torch
 import torch.optim as optim
 from torch import nn
 from torch.utils.data import DataLoader
 from dataclasses import dataclass
 from time import time
+from tqdm import tqdm
+from sklearn.metrics import f1_score
 
 from EarlyStopping import EarlyStopping
+
+
+def progress_bar(loader, desc=""):
+    return tqdm(enumerate(loader), total=len(loader), desc=desc)
 
 
 @dataclass
@@ -22,32 +27,39 @@ class Trainer:
     optimizer: optim.Optimizer
     device: str
     epochs: int
-    early_stopping: EarlyStopping
+    early_stopping: EarlyStopping(verbose=True)
 
     def train_step(self):
         self.model.train()
 
         train_loss: float = 0.0
+        train_f1 = list()
 
-        for _, (data, targets) in enumerate(self.train_loader):
+        pbar = progress_bar(self.train_loader, desc="train step")
+
+        for _, (data, targets) in pbar:
             data = data.to(self.device)
+            targets = targets.to(self.device)
 
             self.optimizer.zero_grad()
-
-            print(data)
 
             with torch.cuda.amp.autocast():
                 preds = self.model(data)
 
                 # calculate loss
-                loss = self.loss_fn(targets, preds)
+                loss = self.loss_fn(preds, targets)
+
+                # calculate f1
+                y_preds = preds.argmax(-1).cpu().numpy()
+                y_target = targets.cpu().numpy()
+                batch_f1 = f1_score(y_target, y_preds, average="micro")
+                train_f1.append(batch_f1)
 
             # Scale gradients
             loss.backward()
 
             # Update optimizer
             self.optimizer.step()
-            self.optimizer.update()
 
             # Add total batch loss to total loss
             batch_loss = loss.item() * data.size(0)
@@ -56,45 +68,59 @@ class Trainer:
         # Calculate average loss
         train_loss /= len(self.train_loader)
 
-        return train_loss
+        avg_train_f1 = sum(train_f1) / len(train_f1)
+
+        return train_loss, avg_train_f1
 
     def val_step(self):
         self.model.eval()
 
         valid_loss: float = 0.0
 
+        valid_f1 = list()
+
+        pbar = progress_bar(self.val_loader, desc="val step")
+
         with torch.inference_mode():
-            for _, (data, targets) in enumerate(self.val_loader):
+            for _, (data, targets) in pbar:
                 data = data.to(self.device)
+                targets = targets.to(self.device)
 
                 preds = self.model(data)
 
                 # Calc. and acc. loss
-                print("targets: ", targets)
-                print("preds: ", preds)
-                loss = self.loss_fn(targets, preds)
+                loss = self.loss_fn(preds, targets)
                 valid_loss += loss.item() * data.size(
                     0
                 )  # * data.size(0) to get total loss for the batch and not the avg.
 
-            # Calculate average loss
-            valid_loss /= len(self.val_loader)
+                y_preds = preds.argmax(-1).cpu().numpy()
+                y_target = targets.cpu().numpy()
+                batch_f1 = f1_score(y_target, y_preds, average="micro")
+                valid_f1.append(batch_f1)
 
-        return valid_loss
+        # Calculate average loss
+        valid_loss /= len(self.val_loader)
+
+        avg_valid_f1 = sum(valid_f1) / len(valid_f1)
+
+        return valid_loss, avg_valid_f1
 
     def train(self):
         results = {"train_losses": list(), "valid_losses": list()}
 
         for epoch in range(1, self.epochs + 1):
             start = time()
-            train_loss = round(self.train_step(), 4)
-            valid_loss = round(self.val_step(), 4)
+            train_loss, avg_train_f1 = [round(x, 4) for x in self.train_step()]
+            valid_loss, avg_valid_f1 = [round(x, 4) for x in self.val_step()]
             stop = time()
 
             print(
                 f"\nEpoch: {epoch}",
                 f"\navg train-loss: {train_loss}",
                 f"\navg val-loss: {valid_loss}",
+                f"\navg train-f1: {avg_train_f1}",
+                f"\navg val-f1: {avg_valid_f1}",
                 f"\ntime: {stop-start:.4f}\n",
             )
             # Save losses

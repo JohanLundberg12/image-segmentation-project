@@ -1,7 +1,7 @@
 import sys
 import yaml
 import torch
-import torch.nn.functional as f
+from torch import nn
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
@@ -20,8 +20,7 @@ def create_model(config: dict):
         pass
         # model = BestCNN()
     else:
-        pass
-        # model = Transformer()
+        raise
 
     return model
 
@@ -64,13 +63,13 @@ def create_dataloaders(config: dict):
         img_path="test", transform=transformation, train=False
     )
     train_loader = DataLoader(
-        sea_animals_train, batch_size=1, shuffle=True, drop_last=False
+        sea_animals_train, batch_size=2, shuffle=True, drop_last=False
     )
     val_loader = DataLoader(
-        sea_animals_val, batch_size=1, shuffle=True, drop_last=False
+        sea_animals_val, batch_size=2, shuffle=True, drop_last=False
     )
     test_loader = DataLoader(
-        sea_animals_test, batch_size=1, shuffle=True, drop_last=False
+        sea_animals_test, batch_size=2, shuffle=True, drop_last=False
     )
 
     return train_loader, val_loader, test_loader
@@ -88,7 +87,7 @@ def make(config: dict):
 def main(config: dict):
     model, train_loader, val_loader, test_loader = make(config)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
-    loss_fn = f.mse_loss
+    loss_fn = nn.CrossEntropyLoss()
     epochs = 10
     device = get_device()
     early_stopping = EarlyStopping()

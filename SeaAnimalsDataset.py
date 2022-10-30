@@ -1,7 +1,6 @@
 from typing import List
 import os
 from PIL import Image
-from torchvision import transforms
 
 
 def get_name(path: str):
@@ -27,6 +26,29 @@ class SeaAnimalsDataset:
         self.total_labels = list(
             map(lambda img_path: get_name(img_path), self.total_imgs)
         )
+
+        dictionary = {
+            "Corals": 0,
+            "Crabs": 1,
+            "Dolphin": 2,
+            "Eel": 3,
+            "Jelly Fish": 4,
+            "Lobster": 5,
+            "Nudibranchs": 6,
+            "Octopus": 7,
+            "Penguin": 8,
+            "Puffers": 9,
+            "Sea Rays": 10,
+            "Sea Urchins": 11,
+            "Seahorse": 12,
+            "Seal": 13,
+            "Sharks": 14,
+            "Squid": 15,
+            "Starfish": 16,
+            "Tortoise": 17,
+            "Whale": 18,
+        }
+        self.total_labels = [dictionary[k] for k in self.total_labels]
 
     def __len__(self):
         return len(self.total_imgs)
