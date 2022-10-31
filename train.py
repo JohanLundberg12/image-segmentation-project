@@ -6,6 +6,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 
 from BaseLineModel import BaseLineModel
+from AquaNet import AquaNet
 
 from SeaAnimalsDataset import SeaAnimalsDataset
 from Trainer import Trainer
@@ -16,9 +17,8 @@ from utils import get_device
 def create_model(config: dict):
     if config["model"]["name"] == "Baseline":
         model = BaseLineModel()
-    elif config["model"]["name"] == "BestCNN":
-        pass
-        # model = BestCNN()
+    elif config["model"]["name"] == "AquaNet":
+        model = AquaNet()
     else:
         raise NameError
 
@@ -63,13 +63,13 @@ def create_dataloaders(config: dict):
         img_path="test", transform=transformation, train=False
     )
     train_loader = DataLoader(
-        sea_animals_train, batch_size=2, shuffle=True, drop_last=False
+        sea_animals_train, batch_size=8, shuffle=True, drop_last=False
     )
     val_loader = DataLoader(
-        sea_animals_val, batch_size=2, shuffle=True, drop_last=False
+        sea_animals_val, batch_size=8, shuffle=True, drop_last=False
     )
     test_loader = DataLoader(
-        sea_animals_test, batch_size=2, shuffle=True, drop_last=False
+        sea_animals_test, batch_size=8, shuffle=True, drop_last=False
     )
 
     return train_loader, val_loader, test_loader
@@ -117,7 +117,7 @@ def main(config: dict):
     print(f"\navg test-f1: {result}")
 
     with open(f"{exp_name}_results.txt", "w") as file:
-        file.write(f"\ntrain-Val results: \n")
+        file.write("\ntrain-Val results: \n")
         for key, val in results.items():
             file.write(f"{key}: ")
             for item in val:
