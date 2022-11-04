@@ -40,7 +40,7 @@ def get_transform():
 
 
 def create_dataloaders(config: dict):
-    augmentations = []
+    augmentations = ["00"]
     if config["augmentation"]["name"] == "all":
         augmentations = ["00", "01", "02", "03", "04", "05", "06"]
     elif not config["augmentation"]["name"]:
